@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  server:
+    platform: linux/amd64
+    build: .
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - ${SERVER_PORT}:${SERVER_PORT}
+    restart: always
+
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    env_file: .env
+    command: ["-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}?sslmode=disable", "-path", "/migrations", "up"]
+    

@@ -152,8 +152,16 @@ func (s *Service) CreateWorkout(ctx context.Context, workout models.WorkoutReque
 	return nil
 }
 
-func (s *Service) GetWorkoutsByDate(ctx context.Context, date time.Time) ([]models.WorkoutResponse, error) {
-	workouts, err := s.repos.GetWorkoutsByDate(ctx, date)
+func (s *Service) GetWorkoutsByDate(ctx context.Context, date time.Time, trainerID int) ([]models.WorkoutResponse, error) {
+	workouts, err := s.repos.GetWorkoutsByDate(ctx, date, trainerID)
+	if err != nil {
+		return nil, err
+	}
+	return workouts, nil
+}
+
+func (s *Service) GetWorkoutsByInterval(ctx context.Context, from, to time.Time, trainerID int) ([]models.WorkoutResponse, error) {
+	workouts, err := s.repos.GetWorkoutsByInterval(ctx, from, to, trainerID)
 	if err != nil {
 		return nil, err
 	}
@@ -174,4 +182,12 @@ func (s *Service) GetWorkoutTypes(ctx context.Context) ([]models.WorkoutType, er
 		return nil, err
 	}
 	return workoutTypes, nil
+}
+
+func (s *Service) ChangeStatusWorkout(ctx context.Context, id int, status string) error {
+	err := s.repos.ChangeStatusWorkout(ctx, id, status)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -183,11 +183,11 @@ func (r *Repository) GetWorkoutTypes(ctx context.Context) ([]models.WorkoutType,
 	return workoutTypes, nil
 }
 
-func (r *Repository) GetWorkoutsByDate(ctx context.Context, date time.Time) ([]models.WorkoutResponse, error) {
+func (r *Repository) GetWorkoutsByDate(ctx context.Context, date time.Time, trainerID int) ([]models.WorkoutResponse, error) {
 	s := r.db.NewSession(nil)
 
 	var workouts []models.WorkoutResponse
-	_, err := s.
+	stmt := s.
 		Select(
 			"workouts.id",
 			"clients.first_name",
@@ -204,11 +204,64 @@ func (r *Repository) GetWorkoutsByDate(ctx context.Context, date time.Time) ([]m
 		Join("clients", "clients.id = workouts.client_id").
 		Join("trainers", "trainers.id = workouts.trainer_id").
 		From("workouts").
-		Where("DATE(date) = ?", date).
-		LoadContext(ctx, &workouts)
+		Where("DATE(date) = ?", date)
+
+	if trainerID != 0 {
+		stmt.Where("workouts.trainer_id = ?", trainerID)
+	}
+
+	_, err := stmt.LoadContext(ctx, &workouts)
 	if err != nil {
 		return nil, err
 	}
 	return workouts, nil
 }
 
+func (r *Repository) GetWorkoutsByInterval(ctx context.Context, dateFrom, dateTo time.Time, trainerID int) ([]models.WorkoutResponse, error) {
+	s := r.db.NewSession(nil)
+
+	var workouts []models.WorkoutResponse
+	stmt := s.
+		Select(
+			"workouts.id",
+			"clients.first_name",
+			"clients.last_name",
+			"clients.phone_number",
+			"trainers.first_name as trainer_first_name",
+			"trainers.last_name as trainer_last_name",
+			"workout_types.title",
+			"workout_types.price",
+			"workouts.status",
+			"workouts.date",
+		).
+		Join("workout_types", "workout_types.id = workouts.workout_type_id").
+		Join("clients", "clients.id = workouts.client_id").
+		Join("trainers", "trainers.id = workouts.trainer_id").
+		From("workouts").
+		Where("DATE(date) BETWEEN ? AND ?", dateFrom, dateTo)
+	
+	if trainerID != 0 {
+		stmt.Where("workouts.trainer_id = ?", trainerID)
+	}
+
+	_, err := stmt.LoadContext(ctx, &workouts)
+	if err != nil {
+		return nil, err
+	}
+	return workouts, nil
+}
+
+func (r *Repository) ChangeStatusWorkout(ctx context.Context, id int, status string) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.
+		Update("workouts").
+		Set("status", status).
+		Where("id = ?", id).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

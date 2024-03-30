@@ -14,19 +14,24 @@ import (
 	"github.com/Hymiside/fitness-api/pkg/service"
 	"github.com/gocraft/dbr/v2"
 	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	if err := godotenv.Load(); err != nil {
+		log.Panicf("error to load .env file: %v", err)
+	}
+
 	psqlInfo := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable", 
-		"hymiside", 
-		"", 
-		"localhost", 
-		"5432", 
-		"fitness",
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_HOST"),
+		os.Getenv("POSTGRES_PORT"),
+		os.Getenv("POSTGRES_DATABASE"),
 	)
 	db, err := dbr.Open("postgres", psqlInfo, nil)
 	if err != nil {
@@ -56,7 +61,7 @@ func main() {
 	}()
 
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf("%s:%s", "0.0.0.0", "3000"),
+		Addr:    fmt.Sprintf("%s:%s", os.Getenv("SERVER_HOST"), os.Getenv("SERVER_PORT")),
 		Handler: handlers.InitRoutes(),
 	}
 

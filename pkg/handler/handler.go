@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Hymiside/fitness-api/pkg/models"
@@ -51,8 +52,9 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 		api.POST("/workout/create", h.createWorkout)
 		api.GET("/workout/:id", nil)
-		api.GET("/workout/list-by-date", h.getWorkoutsByDate)  // ?date=2020-01-01
-		api.GET("/workout/list-by-interval", nil)  // ?from=2020-01-01&to=2020-01-02
+		api.GET("/workout/change-status", h.changeStatusWorkout)  // ?id=1&status=done
+		api.GET("/workout/list-by-date", h.getWorkoutsByDate)  // ?date=2023-12-23T15:04:05Z
+		api.GET("/workout/list-by-interval", h.getWorkoutsByInterval)  // ?from=2023-12-23T15:04:05Z&to=2023-12-23T15:04:05Z
 
 		api.POST("/workout/type/create", h.createWorkoutType)
 		api.GET("/workout/type/list", h.getWorkoutTypes)
@@ -280,6 +282,18 @@ func (h *Handler) getWorkoutTypes(c *gin.Context) {
 }
 
 func (h *Handler) getWorkoutsByDate(c *gin.Context) {
+	data, err := getData(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var trainerID int
+	if data["role"] != "admin" {
+		trainerID = data["userID"].(int)
+	}
+
+
 	dateData, ok := c.GetQuery("date")
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "date not found"})
@@ -293,11 +307,87 @@ func (h *Handler) getWorkoutsByDate(c *gin.Context) {
 		return
 	}
 
-	workouts, err := h.services.GetWorkoutsByDate(c, t)
+	workouts, err := h.services.GetWorkoutsByDate(c, t, trainerID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatusJSON(http.StatusOK, workouts)
+}
+
+func (h *Handler) getWorkoutsByInterval(c *gin.Context) {
+	data, err := getData(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var trainerID int
+	if data["role"] != "admin" {
+		trainerID = data["userID"].(int)
+	}
+
+	dateFromData, ok := c.GetQuery("from")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "from not found"})
+		return
+	}
+
+	dateToData, ok := c.GetQuery("to")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "to not found"})
+		return
+	}
+
+	dateFrom, _ := time.Parse("2006-01-02T15:04:05Z", dateFromData)
+	dateTo, _ := time.Parse("2006-01-02T15:04:05Z", dateToData)
+
+	tFrom, err := time.Parse("2006-01-02", dateFrom.Format("2006-01-02"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tTo, err := time.Parse("2006-01-02", dateTo.Format("2006-01-02"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	workouts, err := h.services.GetWorkoutsByInterval(c, tFrom, tTo, trainerID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.AbortWithStatusJSON(http.StatusOK, workouts)
+}
+
+func (h *Handler) changeStatusWorkout(c *gin.Context) {
+	data, err := getData(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	if data["role"] != "trainer" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	
+	workoutIDdata, _ := c.GetQuery("id")
+	status, _ := c.GetQuery("status")
+
+	workoutID, err := strconv.Atoi(workoutIDdata)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	if err := h.services.ChangeStatusWorkout(c, workoutID, status); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.AbortWithStatus(http.StatusOK)
 }
