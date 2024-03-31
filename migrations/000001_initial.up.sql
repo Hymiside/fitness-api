@@ -34,9 +34,9 @@ create table workouts (
     status varchar not null default 'pending', -- 'pending' or 'done' or 'canceled'
     date timestamp not null,
 
-    foreign key (client_id) references clients(id),
-    foreign key (trainer_id) references trainers(id),
-    foreign key (workout_type_id) references workout_types(id)
+    foreign key (client_id) references clients(id) ON DELETE CASCADE,
+    foreign key (trainer_id) references trainers(id) ON DELETE CASCADE,
+    foreign key (workout_type_id) references workout_types(id) ON DELETE CASCADE
 );
 
 insert into admins (login, password, first_name, last_name) values ('admin', 'admin', 'Admin', 'Admin');

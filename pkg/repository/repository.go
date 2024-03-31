@@ -56,6 +56,18 @@ func (r *Repository) CreateTrainer(ctx context.Context, trainer models.Trainer) 
 	return token, nil
 }
 
+func (r *Repository) DeleteTrainer(ctx context.Context, id int) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.DeleteFrom("trainers").
+		Where("id = ?", id).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *Repository) GetTrainerByToken(ctx context.Context, token string) (models.Trainer, error) {
 	s := r.db.NewSession(nil)
 
@@ -95,6 +107,26 @@ func (r *Repository) GetTrainers(ctx context.Context) ([]models.Trainer, error) 
 	return trainers, nil
 }
 
+func (r *Repository) GetTrainerByID(ctx context.Context, id int) (models.Trainer, error) {
+	s := r.db.NewSession(nil)
+
+	var trainer models.Trainer
+	err := s.
+		Select(
+			"id",
+			"token",
+			"first_name",
+			"last_name",
+		).
+		From("trainers").
+		Where("id = ?", id).
+		LoadOneContext(ctx, &trainer)
+	if err != nil {
+		return models.Trainer{}, err
+	}
+	return trainer, nil
+}
+
 func (r *Repository) CreateClient(ctx context.Context, client models.Client) error {
 	s := r.db.NewSession(nil)
 
@@ -105,6 +137,21 @@ func (r *Repository) CreateClient(ctx context.Context, client models.Client) err
 			"phone_number",
 		).
 		Record(client).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) UpdateClient(ctx context.Context, client models.Client) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.Update("clients").
+		Set("first_name", client.FirstName).
+		Set("last_name", client.LastName).
+		Set("phone_number", client.PhoneNumber).
+		Where("id = ?", client.ID).
 		ExecContext(ctx)
 	if err != nil {
 		return err
@@ -131,6 +178,26 @@ func (r *Repository) GetClients(ctx context.Context) ([]models.Client, error) {
 	return clients, nil
 }
 
+func (r *Repository) GetClientByID(ctx context.Context, id int) (models.Client, error) {
+	s := r.db.NewSession(nil)
+
+	var client models.Client
+	err := s.
+		Select(
+			"id",
+			"first_name",
+			"last_name",
+			"phone_number",
+		).
+		From("clients").
+		Where("id = ?", id).
+		LoadOneContext(ctx, &client)
+	if err != nil {
+		return models.Client{}, err
+	}
+	return client, nil
+}
+
 func (r *Repository) CreateWorkout(ctx context.Context, workout models.WorkoutRequest) error {
 	s := r.db.NewSession(nil)
 
@@ -149,6 +216,34 @@ func (r *Repository) CreateWorkout(ctx context.Context, workout models.WorkoutRe
 	return nil
 }
 
+func (r *Repository) UpdateWorkout(ctx context.Context, workout models.WorkoutRequest) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.Update("workouts").
+		Set("client_id", workout.ClientID).
+		Set("trainer_id", workout.TrainerID).
+		Set("workout_type_id", workout.WorkoutTypeID).
+		Set("date", workout.Date).
+		Where("id = ?", workout.ID).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) DeleteWorkout(ctx context.Context, id int) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.DeleteFrom("workouts").
+		Where("id = ?", id).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *Repository) CreateWorkoutType(ctx context.Context, workoutType models.WorkoutType) error {
 	s := r.db.NewSession(nil)
 
@@ -158,6 +253,32 @@ func (r *Repository) CreateWorkoutType(ctx context.Context, workoutType models.W
 			"price",
 		).
 		Record(workoutType).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) UpdateWorkoutType(ctx context.Context, workoutType models.WorkoutType) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.Update("workout_types").
+		Set("title", workoutType.Title).
+		Set("price", workoutType.Price).
+		Where("id = ?", workoutType.ID).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) DeleteWorkoutType(ctx context.Context, id int) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.DeleteFrom("workout_types").
+		Where("id = ?", id).
 		ExecContext(ctx)
 	if err != nil {
 		return err
@@ -190,11 +311,14 @@ func (r *Repository) GetWorkoutsByDate(ctx context.Context, date time.Time, trai
 	stmt := s.
 		Select(
 			"workouts.id",
-			"clients.first_name",
-			"clients.last_name",
+			"clients.id as c_id",
+			"clients.first_name as c_first_name",
+			"clients.last_name as c_last_name",
 			"clients.phone_number",
-			"trainers.first_name as trainer_first_name",
-			"trainers.last_name as trainer_last_name",
+			"trainers.id as t_id",
+			"trainers.first_name as t_first_name",
+			"trainers.last_name as t_last_name",
+			"workout_types.id as wt_id",
 			"workout_types.title",
 			"workout_types.price",
 			"workouts.status",
@@ -224,11 +348,14 @@ func (r *Repository) GetWorkoutsByInterval(ctx context.Context, dateFrom, dateTo
 	stmt := s.
 		Select(
 			"workouts.id",
-			"clients.first_name",
-			"clients.last_name",
+			"clients.id as c_id",
+			"clients.first_name as c_first_name",
+			"clients.last_name as c_last_name",
 			"clients.phone_number",
-			"trainers.first_name as trainer_first_name",
-			"trainers.last_name as trainer_last_name",
+			"trainers.id as t_id",
+			"trainers.first_name as t_first_name",
+			"trainers.last_name as t_last_name",
+			"workout_types.id as wt_id",
 			"workout_types.title",
 			"workout_types.price",
 			"workouts.status",
@@ -249,6 +376,38 @@ func (r *Repository) GetWorkoutsByInterval(ctx context.Context, dateFrom, dateTo
 		return nil, err
 	}
 	return workouts, nil
+}
+
+func (r *Repository) GetWorkoutByID(ctx context.Context, id int) (models.WorkoutResponse, error) {
+	s := r.db.NewSession(nil)
+
+	var workout models.WorkoutResponse
+	err := s.
+		Select(
+			"workouts.id",
+			"clients.id as c_id",
+			"clients.first_name as c_first_name",
+			"clients.last_name as c_last_name",
+			"clients.phone_number",
+			"trainers.id as t_id",
+			"trainers.first_name as t_first_name",
+			"trainers.last_name as t_last_name",
+			"workout_types.id as wt_id",
+			"workout_types.title",
+			"workout_types.price",
+			"workouts.status",
+			"workouts.date",
+		).
+		Join("workout_types", "workout_types.id = workouts.workout_type_id").
+		Join("clients", "clients.id = workouts.client_id").
+		Join("trainers", "trainers.id = workouts.trainer_id").
+		From("workouts").
+		Where("workouts.id = ?", id).
+		LoadOneContext(ctx, &workout)
+	if err != nil {
+		return models.WorkoutResponse{}, err
+	}
+	return workout, nil
 }
 
 func (r *Repository) ChangeStatusWorkout(ctx context.Context, id int, status string) error {

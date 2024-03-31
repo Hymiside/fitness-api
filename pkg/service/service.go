@@ -120,6 +120,14 @@ func (s *Service) CreateTrainer(ctx context.Context, trainer models.Trainer) (st
 	return token, nil
 }
 
+func (s *Service) DeleteTrainer(ctx context.Context, id int) error {
+	err := s.repos.DeleteTrainer(ctx, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Service) GetTrainers(ctx context.Context) ([]models.Trainer, error) {
 	trainers, err := s.repos.GetTrainers(ctx)
 	if err != nil {
@@ -128,8 +136,24 @@ func (s *Service) GetTrainers(ctx context.Context) ([]models.Trainer, error) {
 	return trainers, nil
 }
 
+func (s *Service) GetTrainerByID(ctx context.Context, id int) (models.Trainer, error) {
+	trainer, err := s.repos.GetTrainerByID(ctx, id)
+	if err != nil {
+		return models.Trainer{}, err
+	}
+	return trainer, nil
+}
+
 func (s *Service) CreateClient(ctx context.Context, client models.Client) error {
 	err := s.repos.CreateClient(ctx, client)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) UpdateClient(ctx context.Context, client models.Client) error {
+	err := s.repos.UpdateClient(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -144,8 +168,32 @@ func (s *Service) GetClients(ctx context.Context) ([]models.Client, error) {
 	return clients, nil
 }
 
+func (s *Service) GetClientByID(ctx context.Context, id int) (models.Client, error) {
+	client, err := s.repos.GetClientByID(ctx, id)
+	if err != nil {
+		return models.Client{}, err
+	}
+	return client, nil
+}
+
 func (s *Service) CreateWorkout(ctx context.Context, workout models.WorkoutRequest) error {
 	err := s.repos.CreateWorkout(ctx, workout)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) UpdateWorkout(ctx context.Context, workout models.WorkoutRequest) error {
+	err := s.repos.UpdateWorkout(ctx, workout)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) DeleteWorkout(ctx context.Context, id int) error {
+	err := s.repos.DeleteWorkout(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -168,8 +216,32 @@ func (s *Service) GetWorkoutsByInterval(ctx context.Context, from, to time.Time,
 	return workouts, nil
 }
 
+func (s *Service) GetWorkoutByID(ctx context.Context, id int) (models.WorkoutResponse, error) {
+	workout, err := s.repos.GetWorkoutByID(ctx, id)
+	if err != nil {
+		return models.WorkoutResponse{}, err
+	}
+	return workout, nil
+}
+
 func (s *Service) CreateWorkoutType(ctx context.Context, workoutType models.WorkoutType) error {
 	err := s.repos.CreateWorkoutType(ctx, workoutType)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) UpdateWorkoutType(ctx context.Context, workoutType models.WorkoutType) error {
+	err := s.repos.UpdateWorkoutType(ctx, workoutType)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) DeleteWorkoutType(ctx context.Context, id int) error {
+	err := s.repos.DeleteWorkoutType(ctx, id)
 	if err != nil {
 		return err
 	}
