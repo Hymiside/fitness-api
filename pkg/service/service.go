@@ -224,6 +224,14 @@ func (s *Service) GetWorkoutByID(ctx context.Context, id int) (models.WorkoutRes
 	return workout, nil
 }
 
+func (s *Service) GetWorkouts(ctx context.Context, trainerID, clientID int) ([]models.WorkoutResponse, error) {
+	workouts, err := s.repos.GetWorkouts(ctx, trainerID, clientID)
+	if err != nil {
+		return nil, err
+	}
+	return workouts, nil
+}
+
 func (s *Service) CreateWorkoutType(ctx context.Context, workoutType models.WorkoutType) error {
 	err := s.repos.CreateWorkoutType(ctx, workoutType)
 	if err != nil {

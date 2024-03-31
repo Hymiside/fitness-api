@@ -61,6 +61,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		api.GET("/workout/change-status", h.changeStatusWorkout)  // ?id=1&status=done
 		api.GET("/workout/list-by-date", h.getWorkoutsByDate)  // ?date=2023-12-23T15:04:05Z
 		api.GET("/workout/list-by-interval", h.getWorkoutsByInterval)  // ?from=2023-12-23T15:04:05Z&to=2023-12-23T15:04:05Z
+		api.GET("/workout/list", h.getWorkouts)  // ?trainer_id=1 or ?client_id=1
 
 		api.POST("/workout/type/create", h.createWorkoutType)
 		api.GET("/workout/type/edit", h.updateWorkoutType)
@@ -390,6 +391,48 @@ func (h *Handler) deleteWorkout(c *gin.Context) {
 	}
 
 	c.AbortWithStatus(http.StatusOK)
+}
+
+func (h *Handler) getWorkouts(c *gin.Context) {
+	data, err := getData(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	if data["role"] != "admin" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+
+	var trainerID int
+	queryTrainerID, ok := c.GetQuery("trainer_id")
+	if ok {
+		trainerID, err = strconv.Atoi(queryTrainerID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	
+
+	var clientID int
+	queryClientID, ok := c.GetQuery("client_id")
+	if ok {
+		clientID, err = strconv.Atoi(queryClientID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	workouts, err := h.services.GetWorkouts(c, trainerID, clientID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, workouts)
 }
 
 func (h *Handler) createWorkoutType(c *gin.Context) {
