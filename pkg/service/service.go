@@ -43,6 +43,30 @@ func NewService(repos *repository.Repository) *Service {
 	return &Service{repos: repos}
 }
 
+func (s *Service) GetAdminType(ctx context.Context, adminID int) (bool, error) {
+	return s.repos.GetAdminType(ctx, adminID)
+}
+
+func (s *Service) GetAdmins(ctx context.Context) ([]models.Admin, error) {
+	return s.repos.GetAdmins(ctx)
+}
+
+func (s *Service) DeleteAdmin(ctx context.Context, adminID int) error {
+	return s.repos.DeleteAdmin(ctx, adminID)
+}
+
+func (s *Service) CreateAdmin(ctx context.Context, admin models.Admin) error {
+	return s.repos.CreateAdmin(ctx, admin)
+}
+
+func (s *Service) GetCashByMonth(ctx context.Context, trainerID int) (int, error) {
+	return s.repos.GetCashByMonth(ctx, trainerID)
+}
+
+func (s *Service) GetCashByDay(ctx context.Context, trainerID int) (int, error) {
+	return s.repos.GetCashByDay(ctx, trainerID)
+}
+
 func (s *Service) GenerateTokenForAdmin(ctx context.Context, login, password string) (string, error) {
 	admin, err := s.repos.GetAdmin(ctx, login)
 	if err != nil {

@@ -42,10 +42,17 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 	api := router.Group("/fitness", h.userIdentity)
 	{
+		api.GET("/admin/list", h.getAdmins)
+		api.POST("/admin/delete", h.deleteAdmin) // ?id=1
+		api.POST("/admin/create", h.createAdmin)
+		api.GET("/admin/type", h.getAdminType)
+
 		api.GET("/trainer", h.getTrainerByID)  // ?id=1
 		api.POST("/trainer/create", h.createTrainer)
 		api.GET("/trainer/delete", h.deleteTrainer) // ?id=1
 		api.GET("/trainer/list", h.getTrainers)
+		api.GET("/trainer/cash/day", h.GetCashByDay)
+		api.GET("/trainer/cash/month", h.GetCashByMonth)
 		
 
 		api.POST("/client/create", h.createClient)
@@ -70,6 +77,74 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	}
 
 	return router
+}
+
+func (h *Handler) createAdmin(c *gin.Context) {
+	admin := models.Admin{}
+	if err := c.BindJSON(&admin); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	if err := h.services.CreateAdmin(c, admin); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, gin.H{"message": "admin created"})
+}
+
+func (h *Handler) getAdmins(c *gin.Context) {
+	admins, err := h.services.GetAdmins(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, gin.H{"admins": admins})
+}
+
+func (h *Handler) deleteAdmin(c *gin.Context) {
+	adminID, _ := strconv.Atoi(c.Query("id"))
+
+	if err := h.services.DeleteAdmin(c, adminID); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, gin.H{"message": "admin deleted"})
+}
+
+func (h *Handler) GetCashByMonth(c *gin.Context) {
+	data, _ := getData(c)
+	trainerID := data["userID"].(int)
+
+	cash, err := h.services.GetCashByMonth(c, trainerID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatusJSON(http.StatusOK, gin.H{"cash": cash})
+}
+
+func (h *Handler) GetCashByDay(c *gin.Context) {
+	data, _ := getData(c)
+	trainerID := data["userID"].(int)
+
+	cash, err := h.services.GetCashByDay(c, trainerID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatusJSON(http.StatusOK, gin.H{"cash": cash})
+}
+
+func (h *Handler) getAdminType(c *gin.Context) {
+	data, _ := getData(c)
+	adminID := data["userID"].(int)
+
+	adminType, err := h.services.GetAdminType(c, adminID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, adminType)
 }
 
 func (h *Handler) signInAdmin(c *gin.Context) {
@@ -415,7 +490,6 @@ func (h *Handler) getWorkouts(c *gin.Context) {
 		}
 	}
 	
-
 	var clientID int
 	queryClientID, ok := c.GetQuery("client_id")
 	if ok {

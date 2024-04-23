@@ -27,6 +27,7 @@ func (r *Repository) GetAdmin(ctx context.Context, login string) (models.Admin, 
 			"password", 
 			"first_name", 
 			"last_name",
+			"super",
 		).
 		From("admins").
 		Where("login = ?", login).
@@ -35,6 +36,75 @@ func (r *Repository) GetAdmin(ctx context.Context, login string) (models.Admin, 
 		return models.Admin{}, err
 	}
 	return admin, nil
+}
+
+func (r *Repository) GetAdminType(ctx context.Context, adminID int) (bool, error) {
+	s := r.db.NewSession(nil)
+
+	var super bool
+	err := s.
+		Select("super").
+		From("admins").
+		Where("id = ?", adminID).
+		LoadOneContext(ctx, &super)
+	if err != nil {
+		return false, err
+	}
+	return super, nil
+}
+
+func (r *Repository) CreateAdmin(ctx context.Context, admin models.Admin) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.InsertInto("admins").
+		Columns(
+			"login",
+			"password",
+			"first_name",
+			"last_name",
+			"super",
+		).
+		Record(admin).
+		ExecContext(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteAdmin(ctx context.Context, id int) error {
+	s := r.db.NewSession(nil)
+
+	_, err := s.DeleteFrom("admins").
+		Where("id = ?", id).
+		ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) GetAdmins(ctx context.Context) ([]models.Admin, error) {
+	s := r.db.NewSession(nil)
+
+	var admins []models.Admin
+	_, err := s.Select(
+		"id",
+		"login",
+		"first_name",
+		"last_name",
+		"super",
+	).
+		From("admins").
+		LoadContext(ctx, &admins)
+	if err != nil {
+		return nil, err
+	}
+
+	return admins, nil
 }
 
 func (r *Repository) CreateTrainer(ctx context.Context, trainer models.Trainer) (string, error) {
@@ -134,7 +204,7 @@ func (r *Repository) CreateClient(ctx context.Context, client models.Client) err
 		Columns(
 			"first_name",
 			"last_name",
-			"phone_number",
+			"surname",
 		).
 		Record(client).
 		ExecContext(ctx)
@@ -150,7 +220,7 @@ func (r *Repository) UpdateClient(ctx context.Context, client models.Client) err
 	_, err := s.Update("clients").
 		Set("first_name", client.FirstName).
 		Set("last_name", client.LastName).
-		Set("phone_number", client.PhoneNumber).
+		Set("surname", client.Surname).
 		Where("id = ?", client.ID).
 		ExecContext(ctx)
 	if err != nil {
@@ -168,7 +238,7 @@ func (r *Repository) GetClients(ctx context.Context) ([]models.Client, error) {
 			"id",
 			"first_name",
 			"last_name",
-			"phone_number",
+			"surname",
 		).
 		From("clients").
 		LoadContext(ctx, &clients)
@@ -187,7 +257,7 @@ func (r *Repository) GetClientByID(ctx context.Context, id int) (models.Client, 
 			"id",
 			"first_name",
 			"last_name",
-			"phone_number",
+			"surname",
 		).
 		From("clients").
 		Where("id = ?", id).
@@ -206,7 +276,7 @@ func (r *Repository) CreateWorkout(ctx context.Context, workout models.WorkoutRe
 			"client_id",
 			"trainer_id",
 			"workout_type_id",
-			"date",
+			"admin_id",
 		).
 		Record(workout).
 		ExecContext(ctx)
@@ -462,4 +532,47 @@ func (r *Repository) ChangeStatusWorkout(ctx context.Context, id int, status str
 	}
 
 	return nil
+}
+
+func (r *Repository) GetCashByMonth(ctx context.Context, trainerID int) (int, error) {
+	s := r.db.NewSession(nil)
+
+	now := time.Now()
+	firstDayOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
+	lastDayOfMonth := firstDayOfMonth.AddDate(0, 1, -1)
+
+	var trainerCash int
+	err := s.
+		Select("SUM(price)/2").
+		From("workout_types").
+		Join("workouts", "workout_types.id = workouts.workout_type_id").
+		Where("workouts.trainer_id = ?", trainerID).
+		Where("DATE(date) BETWEEN ? AND ?", firstDayOfMonth, lastDayOfMonth).
+		LoadOneContext(ctx, &trainerCash)
+	if err != nil {
+		return 0, err
+	}
+
+	return trainerCash, nil
+}
+
+func (r *Repository) GetCashByDay(ctx context.Context, trainerID int) (int, error) {
+	s := r.db.NewSession(nil)
+
+	now := time.Now()
+	day := now.Format("2006-01-02")
+
+	var trainerCash dbr.NullInt64
+	err := s.
+		Select("COALESCE(SUM(price)/2, 0)").
+		From("workout_types").
+		Join("workouts", "workout_types.id = workouts.workout_type_id").
+		Where("workouts.trainer_id = ?", trainerID).
+		Where("DATE(workouts.date) = ?", day).
+		LoadOneContext(ctx, &trainerCash)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(trainerCash.Int64), nil
 }
