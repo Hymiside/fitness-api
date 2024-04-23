@@ -43,7 +43,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	api := router.Group("/fitness", h.userIdentity)
 	{
 		api.GET("/admin/list", h.getAdmins)
-		api.POST("/admin/delete", h.deleteAdmin) // ?id=1
+		api.GET("/admin/delete", h.deleteAdmin) // ?id=1
 		api.POST("/admin/create", h.createAdmin)
 		api.GET("/admin/type", h.getAdminType)
 
@@ -89,7 +89,7 @@ func (h *Handler) createAdmin(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	c.AbortWithStatusJSON(http.StatusOK, gin.H{"message": "admin created"})
+	c.AbortWithStatus(http.StatusOK)
 }
 
 func (h *Handler) getAdmins(c *gin.Context) {
@@ -98,7 +98,7 @@ func (h *Handler) getAdmins(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	c.AbortWithStatusJSON(http.StatusOK, gin.H{"admins": admins})
+	c.AbortWithStatusJSON(http.StatusOK, admins)
 }
 
 func (h *Handler) deleteAdmin(c *gin.Context) {
@@ -108,7 +108,7 @@ func (h *Handler) deleteAdmin(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	c.AbortWithStatusJSON(http.StatusOK, gin.H{"message": "admin deleted"})
+	c.AbortWithStatus(http.StatusOK)
 }
 
 func (h *Handler) GetCashByMonth(c *gin.Context) {
@@ -144,7 +144,7 @@ func (h *Handler) getAdminType(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	c.AbortWithStatusJSON(http.StatusOK, adminType)
+	c.AbortWithStatusJSON(http.StatusOK, gin.H{"type": adminType})
 }
 
 func (h *Handler) signInAdmin(c *gin.Context) {

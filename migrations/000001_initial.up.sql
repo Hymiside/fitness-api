@@ -43,4 +43,4 @@ create table workouts (
     foreign key (workout_type_id) references workout_types(id) ON DELETE CASCADE
 );
 
-insert into admins (login, password, first_name, last_name) values ('admin', 'admin', 'Admin', 'Admin', true);
+insert into admins (login, password, first_name, last_name, super) values ('admin', 'admin', 'Admin', 'Admin', true);

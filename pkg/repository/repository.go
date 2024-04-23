@@ -94,6 +94,7 @@ func (r *Repository) GetAdmins(ctx context.Context) ([]models.Admin, error) {
 	_, err := s.Select(
 		"id",
 		"login",
+		"password",
 		"first_name",
 		"last_name",
 		"super",
@@ -541,7 +542,7 @@ func (r *Repository) GetCashByMonth(ctx context.Context, trainerID int) (int, er
 	firstDayOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
 	lastDayOfMonth := firstDayOfMonth.AddDate(0, 1, -1)
 
-	var trainerCash int
+	var trainerCash dbr.NullInt64
 	err := s.
 		Select("SUM(price)/2").
 		From("workout_types").
@@ -553,7 +554,7 @@ func (r *Repository) GetCashByMonth(ctx context.Context, trainerID int) (int, er
 		return 0, err
 	}
 
-	return trainerCash, nil
+	return int(trainerCash.Int64), nil
 }
 
 func (r *Repository) GetCashByDay(ctx context.Context, trainerID int) (int, error) {
