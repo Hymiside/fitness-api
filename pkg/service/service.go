@@ -59,6 +59,14 @@ func (s *Service) CreateAdmin(ctx context.Context, admin models.Admin) error {
 	return s.repos.CreateAdmin(ctx, admin)
 }
 
+func (s *Service) GetAdminByID(ctx context.Context, adminID int) (models.Admin, error) {
+	return s.repos.GetAdminByID(ctx, adminID)
+}
+
+func (s *Service) GetWorkoutTypeByID(ctx context.Context, id int) (models.WorkoutType, error) {
+	return s.repos.GetWorkoutTypeByID(ctx, id)
+}
+
 func (s *Service) GetCashByMonth(ctx context.Context, trainerID int) (int, error) {
 	return s.repos.GetCashByMonth(ctx, trainerID)
 }
@@ -76,13 +84,18 @@ func (s *Service) GenerateTokenForAdmin(ctx context.Context, login, password str
 		return "", ErrInvalidPwd
 	}
 
+	role := "admin"
+	if admin.Super {
+		role = "sudo"
+	}
+
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(tokenTTL).Unix(),
 			IssuedAt:  time.Now().Unix(),
 		},
 		admin.ID,
-		"admin",
+		role,
 	})
 
 	var tokenString string

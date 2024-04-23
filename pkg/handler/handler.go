@@ -42,6 +42,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 	api := router.Group("/fitness", h.userIdentity)
 	{
+		api.GET("/admin", h.getAdminByID)  // ?id=1
 		api.GET("/admin/list", h.getAdmins)
 		api.GET("/admin/delete", h.deleteAdmin) // ?id=1
 		api.POST("/admin/create", h.createAdmin)
@@ -70,6 +71,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		api.GET("/workout/list-by-interval", h.getWorkoutsByInterval)  // ?from=2023-12-23T15:04:05Z&to=2023-12-23T15:04:05Z
 		api.GET("/workout/list", h.getWorkouts)  // ?trainer_id=1 or ?client_id=1
 
+		api.GET("/workout/type", h.getWorkoutTypeByID)  // ?id=1
 		api.POST("/workout/type/create", h.createWorkoutType)
 		api.GET("/workout/type/edit", h.updateWorkoutType)
 		api.GET("/workout/type/delete", h.deleteWorkoutType)  // ?id=1
@@ -77,6 +79,38 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	}
 
 	return router
+}
+
+func (h *Handler) getWorkoutTypeByID(c *gin.Context) {
+	workoutTypeID, _ := strconv.Atoi(c.Query("id"))
+
+	workoutType, err := h.services.GetWorkoutTypeByID(c, workoutTypeID)
+	if err != nil {
+		if errors.Is(err, dbr.ErrNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, workoutType)
+}
+
+func (h *Handler) getAdminByID(c *gin.Context) {
+	adminID, _ := strconv.Atoi(c.Query("id"))
+
+	admin, err := h.services.GetAdminByID(c, adminID)
+	if err != nil {
+		if errors.Is(err, dbr.ErrNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.AbortWithStatusJSON(http.StatusOK, admin)
 }
 
 func (h *Handler) createAdmin(c *gin.Context) {
@@ -195,17 +229,6 @@ func (h *Handler) signInTrainer(c *gin.Context) {
 }
 
 func (h *Handler) createTrainer(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var trainerData models.Trainer
 	if err := c.BindJSON(&trainerData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -222,17 +245,6 @@ func (h *Handler) createTrainer(c *gin.Context) {
 }
 
 func (h *Handler) deleteTrainer(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	trainerIDdata, _ := c.GetQuery("id")
 	trainerID, err := strconv.Atoi(trainerIDdata)
 	if err != nil {
@@ -250,17 +262,6 @@ func (h *Handler) deleteTrainer(c *gin.Context) {
 }
 
 func (h *Handler) getTrainers(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	trainers, err := h.services.GetTrainers(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -292,24 +293,13 @@ func (h *Handler) getTrainerByID(c *gin.Context) {
 }
 
 func (h *Handler) createClient(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var clientData models.Client
 	if err := c.BindJSON(&clientData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.services.CreateClient(c, clientData)
+	err := h.services.CreateClient(c, clientData)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -319,24 +309,13 @@ func (h *Handler) createClient(c *gin.Context) {
 }
 
 func (h *Handler) updateClient(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var clientData models.Client
 	if err := c.BindJSON(&clientData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.services.UpdateClient(c, clientData)
+	err := h.services.UpdateClient(c, clientData)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -346,17 +325,6 @@ func (h *Handler) updateClient(c *gin.Context) {
 }
 
 func (h *Handler) getClients(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	clients, err := h.services.GetClients(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -394,17 +362,13 @@ func (h *Handler) createWorkout(c *gin.Context) {
 		return
 	}
 
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var workoutData models.WorkoutRequest
 	if err := c.BindJSON(&workoutData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	workoutData.AdminID = data["userID"].(int)
 	err = h.services.CreateWorkout(c, workoutData)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -415,24 +379,13 @@ func (h *Handler) createWorkout(c *gin.Context) {
 }
 
 func (h *Handler) updateWorkout(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var workoutData models.WorkoutRequest
 	if err := c.BindJSON(&workoutData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.services.UpdateWorkout(c, workoutData)
+	err := h.services.UpdateWorkout(c, workoutData)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -441,17 +394,6 @@ func (h *Handler) updateWorkout(c *gin.Context) {
 }
 
 func (h *Handler) deleteWorkout(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	queryData, _ := c.GetQuery("id")
 	workoutID, err := strconv.Atoi(queryData)
 	if err != nil {
@@ -469,18 +411,11 @@ func (h *Handler) deleteWorkout(c *gin.Context) {
 }
 
 func (h *Handler) getWorkouts(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+	var (
+		trainerID int
+		err error
+	)
 
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
-	var trainerID int
 	queryTrainerID, ok := c.GetQuery("trainer_id")
 	if ok {
 		trainerID, err = strconv.Atoi(queryTrainerID)
@@ -510,24 +445,13 @@ func (h *Handler) getWorkouts(c *gin.Context) {
 }
 
 func (h *Handler) createWorkoutType(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var workoutTypeData models.WorkoutType
 	if err := c.BindJSON(&workoutTypeData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.services.CreateWorkoutType(c, workoutTypeData)
+	err := h.services.CreateWorkoutType(c, workoutTypeData)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -537,24 +461,13 @@ func (h *Handler) createWorkoutType(c *gin.Context) {
 }
 
 func (h *Handler) updateWorkoutType(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	var workoutTypeData models.WorkoutType
 	if err := c.BindJSON(&workoutTypeData); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.services.UpdateWorkoutType(c, workoutTypeData)
+	err := h.services.UpdateWorkoutType(c, workoutTypeData)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -564,17 +477,6 @@ func (h *Handler) updateWorkoutType(c *gin.Context) {
 }
 
 func (h *Handler) deleteWorkoutType(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	queryData, _ := c.GetQuery("id")
 	workoutTypeID, err := strconv.Atoi(queryData)
 	if err != nil {
@@ -592,17 +494,6 @@ func (h *Handler) deleteWorkoutType(c *gin.Context) {
 }
 
 func (h *Handler) getWorkoutTypes(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-
 	workoutTypes, err := h.services.GetWorkoutTypes(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -716,17 +607,6 @@ func (h *Handler) getWorkoutByID(c *gin.Context) {
 }
 
 func (h *Handler) changeStatusWorkout(c *gin.Context) {
-	data, err := getData(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-
-	if data["role"] != "admin" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-	
 	workoutIDdata, _ := c.GetQuery("id")
 	status, _ := c.GetQuery("status")
 

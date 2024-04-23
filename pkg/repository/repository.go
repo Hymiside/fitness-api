@@ -139,6 +139,49 @@ func (r *Repository) DeleteTrainer(ctx context.Context, id int) error {
 	return nil
 }
 
+func (r *Repository) GetAdminByID(ctx context.Context, id int) (models.Admin, error) {
+	s := r.db.NewSession(nil)
+
+	var admin models.Admin
+	err := s.
+		Select(
+			"id",
+			"login",
+			"password",
+			"first_name",
+			"last_name",
+			"super",
+		).
+		From("admins").
+		Where("id = ?", id).
+		LoadOneContext(ctx, &admin)
+	if err != nil {
+		return models.Admin{}, err
+	}
+
+	return admin, nil
+}
+
+func (r *Repository) GetWorkoutTypeByID(ctx context.Context, id int) (models.WorkoutType, error) {
+	s := r.db.NewSession(nil)
+
+	var workoutType models.WorkoutType
+	err := s.
+		Select(
+			"id",
+			"title",
+			"price",
+		).
+		From("workout_types").
+		Where("id = ?", id).
+		LoadOneContext(ctx, &workoutType)
+	if err != nil {
+		return models.WorkoutType{}, err
+	}
+
+	return workoutType, nil
+}
+
 func (r *Repository) GetTrainerByToken(ctx context.Context, token string) (models.Trainer, error) {
 	s := r.db.NewSession(nil)
 
